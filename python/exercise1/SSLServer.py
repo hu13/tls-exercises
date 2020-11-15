@@ -26,6 +26,7 @@ class SSLServer:
         # Add code here to disable older protocols and cipher suites. You can add similar code to the client, too.
         # For help check out:
         #      https://github.com/mikepound/tls-exercises/blob/master/python/README.md
+        context.options |= ssl.OP_NO_TLSv1 | ssl.OP_NO_TLSv1_1 | ssl.OP_NO_SSLv3 | ssl.OP_NO_TLSv1_3
 
         self.context = context
 

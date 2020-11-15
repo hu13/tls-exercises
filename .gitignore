@@ -22,3 +22,5 @@ __pycache__/
 ####
 ## CA
 *.old
+.DS_Store
+.vscode

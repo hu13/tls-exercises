@@ -9,6 +9,7 @@ LOCAL_PORT = 8383
 RESOURCE_DIRECTORY = Path(__file__).resolve().parent.parent / 'resources' / 'server'
 SERVER_CERT_CHAIN = RESOURCE_DIRECTORY / 'server.intermediate.chain.pem'
 SERVER_KEY = RESOURCE_DIRECTORY / 'server.key.pem'
+CA_CERT = RESOURCE_DIRECTORY / 'ca.cert.pem'
 
 class SSLServer:
     """
@@ -27,6 +28,8 @@ class SSLServer:
         #
         # For help check out:
         #      https://github.com/mikepound/tls-exercises/blob/master/python/README.md
+        context.load_verify_locations(CA_CERT)
+        context.verify_mode = ssl.CERT_REQUIRED
 
         self.context = context
 

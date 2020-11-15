@@ -39,6 +39,12 @@ def main():
         #
         # For help check out:
         #      https://github.com/mikepound/tls-exercises/blob/master/python/README.md
+        server_cert = conn.getpeercert(binary_form=True)
+        server_cert_sha256 = hashlib.sha256(server_cert)
+        with open(PINNED_FILE, 'rb') as f:
+            pinned_hash = f.read()
+            if pinned_hash != server_cert_sha256.digest():
+                raise ssl.CertificateError
 
         # What parameters were established?
         print("Negotiated session using cipher suite: {0}\n".format(conn.cipher()[0]))

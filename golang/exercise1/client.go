@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
@@ -19,11 +21,11 @@ func main() {
 		log.Fatal(err)
 	}
 
-	resources_dir := fmt.Sprintf("%v/../resources/client", cwd)
-	client_ca_cert := fmt.Sprintf("%v/ca.cert.pem", resources_dir)
+	resourcesDir := fmt.Sprintf("%v/../resources/client", cwd)
+	rootCert := fmt.Sprintf("%v/ca.cert.pem", resourcesDir)
 
 	// Read in the cert file
-	ca_cert, err := ioutil.ReadFile(client_ca_cert)
+	rootCA, err := ioutil.ReadFile(rootCert)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -33,13 +35,13 @@ func main() {
 	if rootCAs == nil {
 		rootCAs = x509.NewCertPool()
 	}
-	if !rootCAs.AppendCertsFromPEM(ca_cert) {
+	if !rootCAs.AppendCertsFromPEM(rootCA) {
 		log.Fatal(fmt.Errorf("Not able to add the root CA"))
 	}
 
-	client_ca_inter_cert := fmt.Sprintf("%v/client.intermediate.chain.pem", resources_dir)
-	client_ca_key := fmt.Sprintf("%v/client.key.pem", resources_dir)
-	cert, err := tls.LoadX509KeyPair(client_ca_inter_cert, client_ca_key)
+	clientIntermCert := fmt.Sprintf("%v/client.intermediate.chain.pem", resourcesDir)
+	clientCAKey := fmt.Sprintf("%v/client.key.pem", resourcesDir)
+	cert, err := tls.LoadX509KeyPair(clientIntermCert, clientCAKey)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -88,6 +90,26 @@ func main() {
 		log.Fatal(err)
 	}
 	defer conn.Close()
+
+	certs := conn.ConnectionState().PeerCertificates
+	if len(certs) == 0 {
+		log.Fatal("Expecting at least one single server cert")
+	}
+
+	ph, err := os.Open(fmt.Sprintf("%v/pinned.hash", resourcesDir))
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer ph.Close()
+	pinnedHash, err := ioutil.ReadAll(ph)
+	if err != nil {
+		log.Fatal(err)
+	}
+	remoteCertCheckSum := sha256.Sum256(certs[0].Raw)
+	if bytes.Compare(pinnedHash, remoteCertCheckSum[:]) != 0 {
+		log.Fatal(fmt.Errorf("pinned hash mismatched"))
+	}
+
 	read(conn)
 }
 

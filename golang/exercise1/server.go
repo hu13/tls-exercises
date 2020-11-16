@@ -17,9 +17,9 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	resources_dir := fmt.Sprintf("%v/../resources/server", cwd)
+	resourcesDir := fmt.Sprintf("%v/../resources/server", cwd)
 
-	server_ca_cert := fmt.Sprintf("%v/ca.cert.pem", resources_dir)
+	server_ca_cert := fmt.Sprintf("%v/ca.cert.pem", resourcesDir)
 	ca_cert, err := ioutil.ReadFile(server_ca_cert)
 	if err != nil {
 		log.Fatal(err)
@@ -29,9 +29,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	server_ca_inter_cert := fmt.Sprintf("%v/server.intermediate.chain.pem", resources_dir)
-	server_ca_key := fmt.Sprintf("%v/server.key.pem", resources_dir)
-	cert, err := tls.LoadX509KeyPair(server_ca_inter_cert, server_ca_key)
+	serverCAIntermCert := fmt.Sprintf("%v/server.intermediate.chain.pem", resourcesDir)
+	serverCAKey := fmt.Sprintf("%v/server.key.pem", resourcesDir)
+	cert, err := tls.LoadX509KeyPair(serverCAIntermCert, serverCAKey)
 	if err != nil {
 		log.Fatal(err)
 	}

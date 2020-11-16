@@ -41,7 +41,7 @@ func main() {
 		ClientCAs:    pools,
 		ClientAuth:   tls.RequireAndVerifyClientCert,
 	}
-	cfg.BuildNameToCertificate()
+
 	ln, err := tls.Listen("tcp", ":8080", cfg)
 	if err != nil {
 		// handle error

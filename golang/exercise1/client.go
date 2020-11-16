@@ -3,12 +3,14 @@ package main
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
 	"net"
 	"os"
+	"time"
 )
 
 func main() {
@@ -31,9 +33,8 @@ func main() {
 	if rootCAs == nil {
 		rootCAs = x509.NewCertPool()
 	}
-
 	if !rootCAs.AppendCertsFromPEM(ca_cert) {
-		log.Fatal(err)
+		log.Fatal(fmt.Errorf("Not able to add the root CA"))
 	}
 
 	client_ca_inter_cert := fmt.Sprintf("%v/client.intermediate.chain.pem", resources_dir)
@@ -44,13 +45,45 @@ func main() {
 	}
 
 	conf := &tls.Config{
-		// InsecureSkipVerify: true,
-		// ServerName: "Expert TLS Server",
 		Certificates: []tls.Certificate{cert},
-		RootCAs:      rootCAs,
+
+		InsecureSkipVerify: true, // Not actually skipping, we check the cert in VerifyPeerCertificate
+		VerifyPeerCertificate: func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
+			// Code copy/pasted and adapted from
+			// https://github.com/golang/go/blob/81555cb4f3521b53f9de4ce15f64b77cc9df61b9/src/crypto/tls/handshake_client.go#L327-L344, but adapted to skip the hostname verification.
+			// See https://github.com/golang/go/issues/21971#issuecomment-412836078.
+
+			// If this is the first handshake on a connection, process and
+			// (optionally) verify the server's certificates.
+			certs := make([]*x509.Certificate, len(rawCerts))
+			for i, asn1Data := range rawCerts {
+				cert, err := x509.ParseCertificate(asn1Data)
+				if err != nil {
+					return errors.New("bitbox/electrum: failed to parse certificate from server: " + err.Error())
+				}
+				certs[i] = cert
+			}
+
+			opts := x509.VerifyOptions{
+				Roots:         rootCAs,
+				CurrentTime:   time.Now(),
+				DNSName:       "", // <- skip hostname verification
+				Intermediates: x509.NewCertPool(),
+			}
+
+			for i, cert := range certs {
+				if i == 0 {
+					continue
+				}
+				opts.Intermediates.AddCert(cert)
+			}
+			_, err := certs[0].Verify(opts)
+			return err
+		},
+		RootCAs: rootCAs,
 	}
 
-	conn, err := tls.Dial("tcp", "localhost:8080", conf)
+	conn, err := tls.Dial("tcp", ":8080", conf)
 	if err != nil {
 		log.Fatal(err)
 	}
